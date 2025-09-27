@@ -44,12 +44,17 @@ def client_to_client_relay():
                 elif addr[0] == rmix_ip:
                     CONNECTIONS['RMIX'] = addr
                     print(f"Rmix {addr} stored")
+            
+
+            # if addr == RMIX:
+            # then send to REMOTE
+            
 
             if 'RMIX' in CONNECTIONS:
-                client_socket.sendto(data, CONNECTIONS['RMIX'])
+                client_socket.sendto(data, CONNECTIONS['REMOTE'])
                 print(f"Forwarded data {data} to mixer at {CONNECTIONS['RMIX']}")
             if 'REMOTE' in CONNECTIONS:
-                client_socket.sendto(data, CONNECTIONS['REMOTE'])
+                client_socket.sendto(data, CONNECTIONS['RMIX'])
                 print(f"Forwarded data {data} to remote at {CONNECTIONS['REMOTE']}")
             
             
