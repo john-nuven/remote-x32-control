@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Get Public IP</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; padding: 2rem; }
+    pre { background:#f6f6f6; padding:1rem; border-radius:6px; }
+    button{ padding:8px 12px; font-size:1rem; }
+  </style>
+</head>
+<body>
+  <h1>Public IP</h1>
+  <p>Click the button to fetch your public IP address (what the internet sees).</p>
+  <button id="btn">Get public IP</button>
+  <pre id="out">—</pre>
+
+  <script>
+    const btn = document.getElementById('btn');
+    const out = document.getElementById('out');
+
+    btn.addEventListener('click', async () => {
+      out.textContent = 'Fetching…';
+      try {
+        // Using ipify.org (simple, widely used). You can replace with another IP API.
+        const res = await fetch('https://api.ipify.org?format=json', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        out.textContent = `Public IP: ${data.ip}\nFull response:\n${JSON.stringify(data, null, 2)}`;
+      } catch (err) {
+        out.textContent = `Error fetching public IP:\n${err.message}`;
+      }
+    });
+  </script>
+</body>
+</html>
