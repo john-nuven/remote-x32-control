@@ -1,9 +1,11 @@
 import socket
 import threading
-import time
+from time import sleep
 
 GUI_IP = '127.0.0.1'
 GUI_PORT = 10023
+
+client = {}
 
 def gui_to_server_relay():
     print("GUI-to-Server relay thread started.")
@@ -12,6 +14,10 @@ def gui_to_server_relay():
             # Receive data from the GUI
             data, addr = gui_socket.recvfrom(4096)
             print(f"Received data from GUI {addr}: {data}")
+
+            if 'addr'not in client:
+                client['addr'] = addr
+                print(f"GUI {client['addr']} stored")
 
             # Forward the data to the server
             server_socket.sendto(data, ('18.223.22.108', 10000))
@@ -28,12 +34,13 @@ def server_to_gui_relay():
             print(f"Received data from server {addr}: {data}")
 
             # Forward the data to the GUI
-            gui_socket.sendto(data, (GUI_IP, GUI_PORT))
-            print(f"Forwarded data to GUI at {GUI_IP}:{GUI_PORT}")
+            gui_socket.sendto(data, client['addr'])
+            print(f"Forwarded data to GUI at {client['addr']}")
         except Exception as e:
             print(f"Error in Server-to-GUI relay: {e}")
 
 if __name__ == "__main__":
+
     gui_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
@@ -61,7 +68,7 @@ if __name__ == "__main__":
     # Keep the main thread alive
     try:
         while True:
-            time.sleep(1)
+            sleep(1)
     except KeyboardInterrupt:
         print("Shutting down...")
         gui_socket.close()
