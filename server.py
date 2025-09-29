@@ -2,32 +2,12 @@ import socket
 import threading
 from time import sleep
 
+CONNECTIONS = {
+    'REMOTE': ('', 0),
+    'RMIX': ('', 0)
+}
 
-CONNECTIONS = {}
-
-remote_ip = '76.53.3.164'
-rmix_ip = '99.24.234.201'
-#SERVER_ADDR = ('18.223.22.108', 10000)
-
-#gui_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-client2_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#mixer_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-
-try:
-    client_socket.bind(('', 10000))  # Bind to any available port for receiving responses
-    print(f"Server socket bound to port {client_socket.getsockname()[1]}")
-except socket.error as e:
-    print(f"Failed to bind socket: {e}")
-    exit()
-
-try:
-    client2_socket.bind(('', 0))  # Bind to any available port for receiving responses
-    print(f"Server socket bound to port {client2_socket.getsockname()[1]}")
-except socket.error as e:
-    print(f"Failed to bind socket: {e}")
-    exit()
-   
+active_address = []
 
 def client_to_client_relay():
     print("Server-to-Mixer relay thread started.")
@@ -35,58 +15,49 @@ def client_to_client_relay():
         try:
             # Receive data from the server
             data, addr = client_socket.recvfrom(4096)
-            print(f"Received data from server {addr}: {data}")
+            if data.startswith(b'/xinfo') and addr not in active_address and addr[0] not in CONNECTIONS['REMOTE'][0]:
+                active_address.append(addr)
+                CONNECTIONS['REMOTE'] = addr
+                print(f"Remote {CONNECTIONS['REMOTE']} stored")
+            elif data.startswith(b'Connect') and addr not in active_address and addr[0] not in CONNECTIONS['RMIX'][0]:
+                active_address.append(addr)
+                CONNECTIONS['RMIX'] = addr
+                print(f"Rmix {CONNECTIONS['RMIX']} stored")
 
-            if addr not in CONNECTIONS.values():
-                if addr[0] == remote_ip:
-                    CONNECTIONS['REMOTE'] = addr
-                    print(f"Remote {addr} stored")
-                elif addr[0] == rmix_ip:
-                    CONNECTIONS['RMIX'] = addr
-                    print(f"Rmix {addr} stored")
             
-
-            # if addr == RMIX:
-            # then send to REMOTE
-            
-
-            if 'RMIX' in CONNECTIONS:
-                client_socket.sendto(data, CONNECTIONS['REMOTE'])
-                print(f"Forwarded data {data} to mixer at {CONNECTIONS['RMIX']}")
-            if 'REMOTE' in CONNECTIONS:
-                client_socket.sendto(data, CONNECTIONS['RMIX'])
-                print(f"Forwarded data {data} to remote at {CONNECTIONS['REMOTE']}")
-            
-            
-
+            for address in active_address:
+                if address == addr and addr[0] == CONNECTIONS['REMOTE'][0]:
+                    print(f"Received data from remote {addr}: {data}")
+                    try:
+                        client_socket.sendto(data, CONNECTIONS['RMIX'])
+                    except Exception as e:
+                        print(f"Failed to send data to rmix: {e}")
+                elif address == addr and addr[0] == CONNECTIONS['RMIX'][0] and not data.startswith(b'Hello'):
+                    print(f"Received data from rmix {addr}: {data}")
+                    try:
+                        client_socket.sendto(data, CONNECTIONS['REMOTE'])
+                    except Exception as e:
+                        print(f"Failed to send data to remote: {e}")
 
         except Exception as e:
             print(f"Error in Server-to-Mixer relay: {e}")
 
-# def server_to_gui_relay():
-#     print("Server-to-GUI relay thread started.")
-#     while True:
-#         try:
-#             # Receive data from the server
-#             data, addr = server_socket.recvfrom(4096)
-#             print(f"Received data from server {addr}: {data}")
-
-#             # Forward the data to the GUI
-#             if REMOTE_ADDR:
-#                 gui_socket.sendto(data, REMOTE_ADDR)
-#                 print(f"Forwarded data to GUI at {REMOTE_ADDR}")
-#             else:
-#                 print("REMOTE_ADDR not set. Cannot forward to GUI.")
-#         except Exception as e:
-#             print(f"Error in Server-to-GUI relay: {e}")
 
 if __name__ == "__main__":
+
+    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    try:
+        client_socket.bind(('', 10000))  # Bind to any available port for receiving responses
+        print(f"Server socket bound to port {client_socket.getsockname()[1]}")
+    except socket.error as e:
+        print(f"Failed to bind socket: {e}")
+        exit()
+
     # Start relay threads
     client_thread = threading.Thread(target=client_to_client_relay, daemon=True)
-    #gui_thread = threading.Thread(target=server_to_gui_relay, daemon=True)
     
     client_thread.start()
-    #gui_thread.start()
 
     # Keep the main thread alive to allow daemon threads to run
     try:
