@@ -27,13 +27,13 @@ def client_to_client_relay():
             
             for address in active_address:
                 if address == addr and addr[0] == CONNECTIONS['REMOTE'][0]:
-                    print(f"Received data from remote {addr}: {data}")
+                    #print(f"Received data from remote {addr}: {data}")
                     try:
                         client_socket.sendto(data, CONNECTIONS['RMIX'])
                     except Exception as e:
                         print(f"Failed to send data to rmix: {e}")
                 elif address == addr and addr[0] == CONNECTIONS['RMIX'][0] and not data.startswith(b'Hello'):
-                    print(f"Received data from rmix {addr}: {data}")
+                    #print(f"Received data from rmix {addr}: {data}")
                     try:
                         client_socket.sendto(data, CONNECTIONS['REMOTE'])
                     except Exception as e:
@@ -65,3 +65,5 @@ if __name__ == "__main__":
             sleep(1)
     except KeyboardInterrupt:
         print("Shutting down server.")
+        client_socket.close()
+        exit()
